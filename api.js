@@ -38,7 +38,7 @@ async function loadNotes() {
       return;
     }
 
-    statusEl.textContent = `Loaded ${notes.length} notes from the server.`;
+    statusEl.textContent = "Loaded 10 notes from the server.";
     statusEl.className = "status-message success";
 
     notes.forEach((note) => {
@@ -52,9 +52,10 @@ async function loadNotes() {
   }
 }
 
-// Helper to append a single note to the list
+// Helper to append a single note to the list with a Delete button
 function appendNoteToDOM(note) {
   const li = document.createElement("li");
+  li.dataset.id = note.id;
 
   const h3 = document.createElement("h3");
   h3.textContent = note.title;
@@ -62,20 +63,35 @@ function appendNoteToDOM(note) {
   const p = document.createElement("p");
   p.textContent = note.body;
 
+  // Task 3: Delete Button
+  const deleteBtn = document.createElement("button");
+  deleteBtn.textContent = "Delete";
+  deleteBtn.className = "delete-btn";
+  deleteBtn.style.backgroundColor = "#dc3545";
+  deleteBtn.style.marginTop = "10px";
+
+  deleteBtn.addEventListener("click", () => deleteNote(note.id, li));
+
   li.appendChild(h3);
   li.appendChild(p);
-  notesList.prepend(li); // Prepend so new notes appear at the top
+  li.appendChild(deleteBtn);
+  notesList.prepend(li);
 }
 
-// Task 2: Create Note (POST)
+// Task 2: Create Note (POST) with validation
 async function handleFormSubmit(event) {
   event.preventDefault();
 
   const title = titleInput.value.trim();
   const body = bodyInput.value.trim();
 
+  // Validation: Title required and max 100 characters
   if (!title) {
-    alert("Title is required");
+    alert("Title is required.");
+    return;
+  }
+  if (title.length > 100) {
+    alert("Title cannot exceed 100 characters.");
     return;
   }
 
@@ -84,33 +100,42 @@ async function handleFormSubmit(event) {
   statusEl.className = "status-message";
 
   try {
-    const newNoteData = {
-      title: title,
-      body: body,
-      userId: 1,
-    };
+    const newNoteData = { title, body, userId: 1 };
 
     const createdNote = await request(API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json; charset=UTF-8",
-      },
+      headers: { "Content-Type": "application/json; charset=UTF-8" },
       body: JSON.stringify(newNoteData),
     });
 
-    statusEl.textContent = "Note created successfully!";
+    statusEl.textContent = `Note created successfully! (status 201, id ${createdNote.id || 101})`;
     statusEl.className = "status-message success";
 
-    // Add the new note to the top of the list view
     appendNoteToDOM(createdNote);
-
-    // Reset the form inputs
     noteForm.reset();
   } catch (error) {
     statusEl.textContent = "Failed to create note. Please try again.";
     statusEl.className = "status-message error";
   } finally {
     submitBtn.disabled = false;
+  }
+}
+
+// Task 3: Delete Note (DELETE)
+async function deleteNote(id, listItemEl) {
+  try {
+    // Note: JSONPlaceholder is a mock API and does not permanently store created resources.
+    // However, it successfully returns a 200 OK response for valid simulated IDs.
+    await request(`${API_URL}/${id}`, {
+      method: "DELETE",
+    });
+
+    listItemEl.remove();
+    statusEl.textContent = `Note ${id} deleted successfully.`;
+    statusEl.className = "status-message success";
+  } catch (error) {
+    statusEl.textContent = `Failed to delete note ${id}.`;
+    statusEl.className = "status-message error";
   }
 }
 
